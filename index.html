@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controle de Rifas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#091a3b;
+    --circle:#06306a;
+    --cell:#0e2a5a;
+    --cell-border:#1d4a8c;
+    --line:#3c76c2;
+    --light:#a8d4f6;
+    --pale:#eaf6fd;
+    --white:#ffffff;
+    --page:#050f24;
+    --ui:#13264d;
+    --ui-border:#24427a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--page);color:var(--white);font-family:'Lexend',sans-serif;min-height:100vh;padding:16px}
+  .wrap{max-width:820px;margin:0 auto}
+
+  /* ---------- Barra de controle ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;flex:1 1 100%;padding-bottom:4px}
+  .tab{flex:0 0 auto;display:flex;align-items:center;gap:6px;background:var(--ui);border:1px solid var(--ui-border);color:#cfe3fa;padding:8px 12px;border-radius:10px;cursor:pointer;font:600 13px 'Lexend',sans-serif;white-space:nowrap}
+  .tab.active{background:var(--light);color:var(--bg);border-color:var(--light)}
+  .tab .x{opacity:.6;font-size:15px;line-height:1;padding:0 2px}
+  .tab .x:hover{opacity:1}
+  .btn{background:var(--ui);border:1px solid var(--ui-border);color:#cfe3fa;padding:8px 12px;border-radius:10px;cursor:pointer;font:600 13px 'Lexend',sans-serif}
+  .btn:hover{border-color:var(--light)}
+  .btn.primary{background:var(--light);color:var(--bg);border-color:var(--light)}
+  .stats{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#cfe3fa;margin-bottom:12px}
+  .stats b{color:var(--white)}
+  .hint{font-size:12px;color:#7f9cc8;margin:10px 0 0}
+
+  /* ---------- Cartela (proporção do modelo 1588x2246) ---------- */
+  .poster-holder{container-type:inline-size;width:100%}
+  .poster{position:relative;width:100cqw;aspect-ratio:1588/2246;background:var(--bg);overflow:hidden;border-radius:1.2cqw;display:flex;flex-direction:column;padding:6.05cqw 6.05cqw 6.05cqw}
+  .circle{position:absolute;left:62.03cqw;top:-22.98cqw;width:61.08cqw;height:61.08cqw;border-radius:50%;background:var(--circle);z-index:0}
+  .poster > *:not(.circle){position:relative;z-index:1}
+
+  [contenteditable]{outline:none;border-radius:.4cqw}
+  [contenteditable]:hover{box-shadow:0 0 0 .15cqw rgba(168,212,246,.35)}
+  [contenteditable]:focus{box-shadow:0 0 0 .2cqw var(--light)}
+
+  .header{display:flex;justify-content:space-between;align-items:flex-end;gap:2cqw}
+  .pill{display:inline-block;background:var(--light);color:var(--bg);font:600 1.95cqw 'Lexend',sans-serif;letter-spacing:.2cqw;padding:1.45cqw 2.4cqw;border-radius:5cqw;line-height:1.1}
+  .title{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:6.35cqw;line-height:1.02;letter-spacing:-.08cqw;margin-top:2.2cqw;max-width:44cqw}
+  .subtitle{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:3.95cqw;color:var(--light);line-height:1.1;margin-top:.7cqw}
+  .right{text-align:right;padding-bottom:.4cqw}
+  .price{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:5.1cqw;line-height:1}
+  .date{font:600 1.95cqw 'Lexend',sans-serif;letter-spacing:.2cqw;color:var(--light);margin-top:1.6cqw}
+
+  .grid{display:grid;grid-template-columns:repeat(10,1fr);column-gap:1.3cqw;row-gap:1.32cqw;margin-top:4.6cqw}
+  .cell{position:relative;aspect-ratio:1/1;background:var(--cell);border:.1cqw solid var(--cell-border);border-radius:3.9cqw 3.9cqw 0 0;cursor:pointer;display:flex;justify-content:center;transition:background .15s}
+  .cell:hover{border-color:var(--light)}
+  .cell .num{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:3.05cqw;line-height:1;margin-top:1.55cqw;color:var(--white)}
+  .cell .ln{position:absolute;left:50%;transform:translateX(-50%);bottom:1.3cqw;width:4.5cqw;height:.17cqw;background:var(--line)}
+  .cell .name{position:absolute;left:.4cqw;right:.4cqw;bottom:1.75cqw;text-align:center;font:600 1.05cqw 'Lexend',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--bg)}
+  .cell.sold{background:var(--light);border-color:var(--light)}
+  .cell.sold .num{color:var(--bg)}
+  .cell.sold .ln{background:var(--bg);opacity:.5}
+  .hide-names .cell .name{display:none}
+
+  .footer{margin-top:auto;background:var(--pale);color:var(--bg);border-radius:5cqw;height:8.7cqw;display:flex;align-items:center;justify-content:space-between;padding:0 4.9cqw 0 4.95cqw}
+  .footer .ftext{font:600 2.1cqw 'Lexend',sans-serif;letter-spacing:.2cqw}
+  .footer .phone{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:3.9cqw;line-height:1}
+
+  /* ---------- Modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(3,9,22,.75);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+  .overlay.open{display:flex}
+  .modal{background:var(--bg);border:1px solid var(--ui-border);border-radius:16px;padding:22px;width:100%;max-width:360px}
+  .modal h2{font-family:'Fraunces',serif;font-weight:900;font-size:30px;margin-bottom:4px}
+  .modal .status{font-size:13px;color:var(--light);margin-bottom:14px}
+  .modal label{display:block;font-size:12px;color:#9fbbe0;margin:10px 0 4px;letter-spacing:.05em}
+  .modal input[type=text]{width:100%;background:var(--ui);border:1px solid var(--ui-border);color:var(--white);padding:10px 12px;border-radius:10px;font:500 15px 'Lexend',sans-serif;outline:none}
+  .modal input[type=text]:focus{border-color:var(--light)}
+  .modal .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .modal .actions .btn{flex:1}
+  .btn.danger{border-color:#7a2e3a;color:#ffb3bd}
+
+  @media print{
+    body{background:var(--bg);padding:0}
+    .toolbar,.stats,.hint{display:none}
+    .poster{border-radius:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="toolbar">
+    <div class="tabs" id="tabs"></div>
+    <button class="btn primary" id="addTab">+ Nova cartela</button>
+    <button class="btn" id="toggleNames">Ocultar nomes</button>
+    <button class="btn" id="exportBtn">Exportar backup</button>
+    <button class="btn" id="importBtn">Importar backup</button>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </div>
+  <div class="stats" id="stats"></div>
+
+  <div class="poster-holder">
+    <div class="poster" id="poster">
+      <div class="circle"></div>
+      <div><span class="pill" contenteditable data-field="label"></span></div>
+      <div class="header">
+        <div>
+          <div class="title" contenteditable data-field="title"></div>
+          <div class="subtitle" contenteditable data-field="subtitle"></div>
+        </div>
+        <div class="right">
+          <div class="price" contenteditable data-field="price"></div>
+          <div class="date" contenteditable data-field="date"></div>
+        </div>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="footer">
+        <span class="ftext" contenteditable data-field="footer"></span>
+        <span class="phone" contenteditable data-field="phone"></span>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Clique num número para marcar a venda. Clique nos textos da cartela para editar. Dê dois cliques numa aba para renomear.</p>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="mNum">01</h2>
+    <div class="status" id="mStatus">Disponível</div>
+    <label for="mName">NOME DO COMPRADOR</label>
+    <input type="text" id="mName" placeholder="Ex.: Maria Souza" autocomplete="off">
+    <label for="mContact">CONTATO (opcional)</label>
+    <input type="text" id="mContact" placeholder="Ex.: (19) 99999-0000" autocomplete="off">
+    <div class="actions">
+      <button class="btn primary" id="mSave">Marcar vendido</button>
+      <button class="btn danger" id="mFree">Liberar</button>
+      <button class="btn" id="mCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = 'controle-rifas-v1';
+const DEFAULTS = {
+  label: 'RIFA SOLIDÁRIA',
+  title: 'Camisa autografada',
+  subtitle: 'Henrique Honorato',
+  price: 'R$ 10,00',
+  date: 'SORTEIO 31 DE OUTUBRO',
+  footer: 'ESCOLHA SEU NÚMERO NO ZAP',
+  phone: '(19) 99888-3443'
+};
+
+function newTab(name, base){
+  const src = base || DEFAULTS;
+  return {
+    id: 't' + Date.now() + Math.random().toString(36).slice(2,6),
+    name,
+    label: src.label, title: src.title, subtitle: src.subtitle,
+    price: src.price, date: src.date, footer: src.footer, phone: src.phone,
+    sold: {}
+  };
+}
+
+let state;
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(raw){ state = JSON.parse(raw); }
+  }catch(e){}
+  if(!state || !Array.isArray(state.tabs) || !state.tabs.length){
+    const t = newTab('Cartela 1');
+    state = { tabs:[t], active:t.id, hideNames:false };
+  }
+  if(!state.tabs.find(t=>t.id===state.active)) state.active = state.tabs[0].id;
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+}
+const cur = () => state.tabs.find(t=>t.id===state.active);
+const pad = n => String(n).padStart(2,'0');
+
+function parsePrice(txt){
+  const m = String(txt).replace(/\./g,'').replace(',', '.').match(/[\d.]+/);
+  return m ? parseFloat(m[0]) || 0 : 0;
+}
+function brl(v){ return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+
+/* ---------- Render ---------- */
+function renderTabs(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = '';
+  state.tabs.forEach(t=>{
+    const b = document.createElement('div');
+    b.className = 'tab' + (t.id===state.active ? ' active' : '');
+    const sold = Object.keys(t.sold).length;
+    b.innerHTML = `<span class="lbl"></span><span style="opacity:.7">${sold}/100</span>` +
+      (state.tabs.length>1 ? '<span class="x" title="Excluir">×</span>' : '');
+    b.querySelector('.lbl').textContent = t.name;
+    b.onclick = e=>{
+      if(e.target.classList.contains('x')){
+        if(confirm(`Excluir "${t.name}"? Essa ação não pode ser desfeita.`)){
+          state.tabs = state.tabs.filter(x=>x.id!==t.id);
+          if(state.active===t.id) state.active = state.tabs[0].id;
+          save(); renderAll();
+        }
+        return;
+      }
+      state.active = t.id; save(); renderAll();
+    };
+    b.ondblclick = ()=>{
+      const n = prompt('Nome da aba:', t.name);
+      if(n && n.trim()){ t.name = n.trim(); save(); renderTabs(); }
+    };
+    el.appendChild(b);
+  });
+}
+
+function renderFields(){
+  const t = cur();
+  document.querySelectorAll('[data-field]').forEach(el=>{
+    el.textContent = t[el.dataset.field] ?? '';
+  });
+}
+
+function renderGrid(){
+  const t = cur();
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+  for(let i=1;i<=100;i++){
+    const c = document.createElement('div');
+    const s = t.sold[i];
+    c.className = 'cell' + (s ? ' sold' : '');
+    c.innerHTML = `<span class="num">${i===100?'100':pad(i)}</span><span class="name"></span><span class="ln"></span>`;
+    if(s){
+      c.querySelector('.name').textContent = s.name || '';
+      c.title = (s.name||'Vendido') + (s.contact ? ' · ' + s.contact : '');
+    }
+    c.onclick = ()=>openModal(i);
+    g.appendChild(c);
+  }
+}
+
+function renderStats(){
+  const t = cur();
+  const sold = Object.keys(t.sold).length;
+  const total = sold * parsePrice(t.price);
+  document.getElementById('stats').innerHTML =
+    `<span>Vendidos: <b>${sold}</b>/100</span><span>Livres: <b>${100-sold}</b></span><span>Arrecadado: <b>${brl(total)}</b></span>`;
+}
+
+function renderAll(){
+  document.getElementById('poster').classList.toggle('hide-names', !!state.hideNames);
+  document.getElementById('toggleNames').textContent = state.hideNames ? 'Mostrar nomes' : 'Ocultar nomes';
+  renderTabs(); renderFields(); renderGrid(); renderStats();
+}
+
+/* ---------- Campos editáveis ---------- */
+document.querySelectorAll('[data-field]').forEach(el=>{
+  el.addEventListener('input', ()=>{
+    cur()[el.dataset.field] = el.textContent;
+    save();
+    if(el.dataset.field==='price') renderStats();
+  });
+  el.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); el.blur(); } });
+  el.addEventListener('paste', e=>{
+    e.preventDefault();
+    document.execCommand('insertText', false, (e.clipboardData||window.clipboardData).getData('text'));
+  });
+});
+
+/* ---------- Modal ---------- */
+let editing = null;
+const ov = document.getElementById('overlay');
+const mName = document.getElementById('mName');
+const mContact = document.getElementById('mContact');
+function openModal(n){
+  editing = n;
+  const s = cur().sold[n];
+  document.getElementById('mNum').textContent = 'Número ' + (n===100?'100':pad(n));
+  document.getElementById('mStatus').textContent = s ? 'Vendido' : 'Disponível';
+  document.getElementById('mSave').textContent = s ? 'Salvar' : 'Marcar vendido';
+  document.getElementById('mFree').style.display = s ? '' : 'none';
+  mName.value = s ? (s.name||'') : '';
+  mContact.value = s ? (s.contact||'') : '';
+  ov.classList.add('open');
+  setTimeout(()=>mName.focus(), 30);
+}
+function closeModal(){ ov.classList.remove('open'); editing = null; }
+document.getElementById('mSave').onclick = ()=>{
+  cur().sold[editing] = { name: mName.value.trim(), contact: mContact.value.trim(), at: new Date().toISOString() };
+  save(); closeModal(); renderGrid(); renderStats(); renderTabs();
+};
+document.getElementById('mFree').onclick = ()=>{
+  if(confirm('Liberar este número?')){
+    delete cur().sold[editing];
+    save(); closeModal(); renderGrid(); renderStats(); renderTabs();
+  }
+};
+document.getElementById('mCancel').onclick = closeModal;
+ov.addEventListener('click', e=>{ if(e.target===ov) closeModal(); });
+document.addEventListener('keydown', e=>{
+  if(!ov.classList.contains('open')) return;
+  if(e.key==='Escape') closeModal();
+  if(e.key==='Enter') document.getElementById('mSave').click();
+});
+
+/* ---------- Barra ---------- */
+document.getElementById('addTab').onclick = ()=>{
+  const n = prompt('Nome da nova cartela:', 'Cartela ' + (state.tabs.length+1));
+  if(!n) return;
+  const t = newTab(n.trim() || 'Cartela', cur());
+  state.tabs.push(t); state.active = t.id; save(); renderAll();
+};
+document.getElementById('toggleNames').onclick = ()=>{
+  state.hideNames = !state.hideNames; save(); renderAll();
+};
+document.getElementById('exportBtn').onclick = ()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'rifas-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+document.getElementById('importBtn').onclick = ()=>document.getElementById('importFile').click();
+document.getElementById('importFile').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>{
+    try{
+      const data = JSON.parse(r.result);
+      if(!Array.isArray(data.tabs) || !data.tabs.length) throw 0;
+      if(!confirm('Substituir os dados atuais pelo backup?')) return;
+      state = data;
+      if(!state.tabs.find(t=>t.id===state.active)) state.active = state.tabs[0].id;
+      save(); renderAll();
+    }catch(err){ alert('Arquivo de backup inválido.'); }
+    e.target.value = '';
+  };
+  r.readAsText(f);
+};
+
+load();
+renderAll();
+</script>
+</body>
+</html>
