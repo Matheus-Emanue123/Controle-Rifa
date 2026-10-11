@@ -63,6 +63,7 @@
   .cell .num{font-family:'Fraunces',serif;font-weight:900;font-variation-settings:'opsz' 144;font-size:3.05cqw;line-height:1;margin-top:1.55cqw;color:var(--white)}
   .cell .ln{position:absolute;left:50%;transform:translateX(-50%);bottom:1.3cqw;width:4.5cqw;height:.17cqw;background:var(--line)}
   .cell .name{position:absolute;left:.4cqw;right:.4cqw;bottom:1.75cqw;text-align:center;font:600 1.05cqw 'Lexend',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--bg)}
+  .cell.long .num{font-size:2.35cqw;margin-top:1.85cqw}
   .cell.sold{background:var(--light);border-color:var(--light)}
   .cell.sold .num{color:var(--bg)}
   .cell.sold .ln{background:var(--bg);opacity:.5}
@@ -163,9 +164,27 @@ function newTab(name, base){
     name,
     label: src.label, title: src.title, subtitle: src.subtitle,
     price: src.price, date: src.date, footer: src.footer, phone: src.phone,
+    start: 1,
     sold: {}
   };
 }
+
+/* Cartelas antigas sem "start": numera em sequência e ajusta os vendidos */
+function migrate(){
+  state.tabs.forEach((t,i)=>{
+    if(typeof t.start !== 'number'){
+      t.start = i*100 + 1;
+      const off = t.start - 1;
+      if(off){
+        const s = {};
+        Object.keys(t.sold||{}).forEach(k=>{ s[Number(k)+off] = t.sold[k]; });
+        t.sold = s;
+      }
+    }
+    t.sold = t.sold || {};
+  });
+}
+const nextStart = () => Math.max(...state.tabs.map(t=>t.start)) + 100;
 
 let state;
 function load(){
@@ -177,7 +196,9 @@ function load(){
     const t = newTab('Cartela 1');
     state = { tabs:[t], active:t.id, hideNames:false };
   }
+  migrate();
   if(!state.tabs.find(t=>t.id===state.active)) state.active = state.tabs[0].id;
+  save();
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
@@ -232,11 +253,12 @@ function renderGrid(){
   const t = cur();
   const g = document.getElementById('grid');
   g.innerHTML = '';
-  for(let i=1;i<=100;i++){
+  for(let k=0;k<100;k++){
+    const i = t.start + k;
     const c = document.createElement('div');
     const s = t.sold[i];
-    c.className = 'cell' + (s ? ' sold' : '');
-    c.innerHTML = `<span class="num">${i===100?'100':pad(i)}</span><span class="name"></span><span class="ln"></span>`;
+    c.className = 'cell' + (s ? ' sold' : '') + (i>=1000 ? ' long' : '');
+    c.innerHTML = `<span class="num">${pad(i)}</span><span class="name"></span><span class="ln"></span>`;
     if(s){
       c.querySelector('.name').textContent = s.name || '';
       c.title = (s.name||'Vendido') + (s.contact ? ' · ' + s.contact : '');
@@ -282,7 +304,7 @@ const mContact = document.getElementById('mContact');
 function openModal(n){
   editing = n;
   const s = cur().sold[n];
-  document.getElementById('mNum').textContent = 'Número ' + (n===100?'100':pad(n));
+  document.getElementById('mNum').textContent = 'Número ' + pad(n);
   document.getElementById('mStatus').textContent = s ? 'Vendido' : 'Disponível';
   document.getElementById('mSave').textContent = s ? 'Salvar' : 'Marcar vendido';
   document.getElementById('mFree').style.display = s ? '' : 'none';
@@ -315,6 +337,7 @@ document.getElementById('addTab').onclick = ()=>{
   const n = prompt('Nome da nova cartela:', 'Cartela ' + (state.tabs.length+1));
   if(!n) return;
   const t = newTab(n.trim() || 'Cartela', cur());
+  t.start = nextStart();
   state.tabs.push(t); state.active = t.id; save(); renderAll();
 };
 document.getElementById('toggleNames').onclick = ()=>{
@@ -338,6 +361,7 @@ document.getElementById('importFile').onchange = e=>{
       if(!Array.isArray(data.tabs) || !data.tabs.length) throw 0;
       if(!confirm('Substituir os dados atuais pelo backup?')) return;
       state = data;
+      migrate();
       if(!state.tabs.find(t=>t.id===state.active)) state.active = state.tabs[0].id;
       save(); renderAll();
     }catch(err){ alert('Arquivo de backup inválido.'); }
