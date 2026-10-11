@@ -6,7 +6,8 @@
 <title>Controle de Rifas</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,800;9..144,900&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
 <style>
   :root{
     --bg:#091a3b;
@@ -68,6 +69,9 @@
   .cell.sold .num{color:var(--bg)}
   .cell.sold .ln{background:var(--bg);opacity:.5}
   .hide-names .cell .name{display:none}
+  .poster.exporting{border-radius:0}
+  .exporting [contenteditable]{box-shadow:none !important}
+  .exporting .cell{transition:none}
 
   .footer{margin-top:auto;background:var(--pale);color:var(--bg);border-radius:5cqw;height:8.7cqw;display:flex;align-items:center;justify-content:space-between;padding:0 4.9cqw 0 4.95cqw}
   .footer .ftext{font:600 2.1cqw 'Lexend',sans-serif;letter-spacing:.2cqw}
@@ -98,6 +102,7 @@
   <div class="toolbar">
     <div class="tabs" id="tabs"></div>
     <button class="btn primary" id="addTab">+ Nova cartela</button>
+    <button class="btn" id="pngBtn">Exportar PNG</button>
     <button class="btn" id="toggleNames">Ocultar nomes</button>
     <button class="btn" id="exportBtn">Exportar backup</button>
     <button class="btn" id="importBtn">Importar backup</button>
@@ -340,6 +345,33 @@ document.getElementById('addTab').onclick = ()=>{
   t.start = nextStart();
   state.tabs.push(t); state.active = t.id; save(); renderAll();
 };
+/* Exporta a cartela na resolução do modelo (1588 px de largura) ou maior */
+document.getElementById('pngBtn').onclick = async ()=>{
+  const btn = document.getElementById('pngBtn');
+  const poster = document.getElementById('poster');
+  if(typeof htmlToImage === 'undefined'){ alert('Não foi possível carregar o exportador. Verifique a conexão.'); return; }
+  btn.disabled = true; btn.textContent = 'Gerando...';
+  if(document.activeElement) document.activeElement.blur();
+  poster.classList.add('exporting');
+  try{
+    await document.fonts.ready;
+    const ratio = Math.max(2, 1600 / poster.offsetWidth);
+    const opts = { pixelRatio: ratio, cacheBust: true, backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--page').trim() };
+    await htmlToImage.toPng(poster, opts); // primeira passada carrega fontes (Safari)
+    const url = await htmlToImage.toPng(poster, opts);
+    const name = (cur().name || 'cartela').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-') || 'cartela';
+    const a = document.createElement('a');
+    a.href = url; a.download = `rifa-${name}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+  }catch(err){
+    console.error(err);
+    alert('Erro ao gerar a imagem.');
+  }finally{
+    poster.classList.remove('exporting');
+    btn.disabled = false; btn.textContent = 'Exportar PNG';
+  }
+};
+
 document.getElementById('toggleNames').onclick = ()=>{
   state.hideNames = !state.hideNames; save(); renderAll();
 };
